@@ -2,6 +2,7 @@ import socket
 import logging
 from _thread import start_new_thread
 import configparser
+import argparse
 from typing import Tuple
 
 logging.basicConfig(
@@ -12,11 +13,9 @@ logging.basicConfig(
 
 
 class Server:
-    def __init__(self, config_file: str) -> None:
-        config = configparser.ConfigParser()
-        config.read(f"{config_file}")
-
+    def __init__(self, config, args) -> None:
         self.config = config
+        self.args = args
         self.positions = [(50, 50), (200, 200)]
 
     def run_server(self) -> None:
@@ -25,19 +24,21 @@ class Server:
 
         # Bind socket to address and port
         server_socket.bind(
-            (self.config["server"]["host"], int(self.config["server"]["port"]))
+            (self.args.host, self.args.port)
         )
 
         logging.info(
             "Started server on host: %s, port: %s",
-            self.config["server"]["host"],
-            self.config["server"]["port"],
+            self.args.host,
+            self.args.port,
         )
 
         # Listen for connections
         server_socket.listen(int(self.config["server"]["maxConnections"]))
 
-        player_id = 0
+        # Player ID counter allows us to keep track of the players and reconnect
+        # if the client closes the connection
+        self._player_id = 0
 
         # Main server loop
         while True:
@@ -46,8 +47,8 @@ class Server:
 
             logging.info("Connected to: %s", address)
 
-            start_new_thread(self.threaded_client, (connection, player_id))
-            player_id += 1
+            start_new_thread(self.threaded_client, (connection, self._player_id))
+            self._player_id += 1
 
     def threaded_client(self, connection, player_id) -> None:
         connection.send(str.encode(str(player_id)))
@@ -75,6 +76,8 @@ class Server:
             connection.sendall(str.encode(message))
 
         logging.info("Connection Closed")
+
+        self._player_id -= 1
         connection.close()
 
     def parse_response(self, response) -> Tuple[int, int, int]:
@@ -87,5 +90,28 @@ class Server:
 
 
 if __name__ == "__main__":
-    server = Server("config.ini")
-    server.run_server()
+    config = configparser.ConfigParser()
+    config.read(f"config.ini")
+
+    argparser = argparse.ArgumentParser("Pyng Pong Server")
+    argparser.add_argument(
+        "--host",
+        type=str,
+        default="localhost",
+        help="Host to run the server on"
+    )
+    argparser.add_argument(
+        "--port",
+        "-p",
+        type=int,
+        default=8000,
+        help="Port to which the server will listen"
+    )
+
+    args = argparser.parse_args()
+
+    server = Server(config, args)
+    try:
+        server.run_server()
+    except KeyboardInterrupt:
+        logging.info("Shutting down server...")

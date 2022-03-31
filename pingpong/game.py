@@ -26,8 +26,8 @@ class Player:
 
 class Game:
 
-    def __init__(self, width: int, height: int) -> None:
-        self.net = Network()
+    def __init__(self, width: int, height: int, host: str, port: int) -> None:
+        self.net = Network(host, port)
         self.width = width
         self.height = height
         self.player1 = Player(10, self.height / 2 - Player.height / 2)
