@@ -18,7 +18,7 @@ Run the game server:
 
 *Note: if running Python 3 only, replace `python3` with `python`.*
 ```sh
-python3 -m pingpong/server.py [--host HOST] 
+python3 pingpong/server.py [--host HOST] 
                               [--port PORT]
 ```
 

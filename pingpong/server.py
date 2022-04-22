@@ -23,9 +23,7 @@ class Server:
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         # Bind socket to address and port
-        server_socket.bind(
-            (self.args.host, self.args.port)
-        )
+        server_socket.bind((self.args.host, self.args.port))
 
         logging.info(
             "Started server on host: %s, port: %s",
@@ -95,17 +93,14 @@ if __name__ == "__main__":
 
     argparser = argparse.ArgumentParser("Pyng Pong Server")
     argparser.add_argument(
-        "--host",
-        type=str,
-        default="localhost",
-        help="Host to run the server on"
+        "--host", type=str, default="localhost", help="Host to run the server on"
     )
     argparser.add_argument(
         "--port",
         "-p",
         type=int,
         default=8000,
-        help="Port to which the server will listen"
+        help="Port to which the server will listen",
     )
 
     args = argparser.parse_args()
