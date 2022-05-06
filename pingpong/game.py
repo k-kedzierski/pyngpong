@@ -20,7 +20,8 @@ class Player:
         self.x = init_x
         self.y = init_y
         self.color = color
-        self.velocity = 20
+        self.velocity = 4
+        self.angle = 0
 
     def draw(self, game):
         pygame.draw.rect(game, self.color, (self.x, self.y, self.width, self.height), 0)
@@ -35,6 +36,17 @@ class Player:
         elif direction == Direction.DOWN:
             self.y += self.velocity
 
+    def move_mouse(self, mouse_x, mouse_y):
+        eucl_dist = math.hypot(mouse_x - self.x - (self.width / 2), mouse_y - self.y - (self.height / 2))
+        if eucl_dist > self.velocity:
+            sinx = (mouse_y - self.y - (self.height / 2)) / eucl_dist
+            cosx = (mouse_x - self.x - (self.width / 2)) / eucl_dist
+
+            self.x += self.velocity * cosx
+            self.y += self.velocity * sinx
+
+            self.angle = math.atan2(mouse_y - self.y - (self.height / 2), mouse_x - self.x - (self.width / 2))
+
 
 class Ball:
     radius = 10
@@ -45,6 +57,7 @@ class Ball:
         self.color = color
         self.velocity = 4
         self.direction = self._random_direction()
+        self.cooldown = 20
 
     def draw(self, game):
         pygame.draw.circle(game, self.color, (self.x, self.y), self.radius)
@@ -100,7 +113,9 @@ class Ball:
             and self.y > game.player1.y
             and self.y < game.player1.y + game.player1.height
         ):
-            self.flip_y()
+            if self.cooldown == 0:
+                self.direction = game.player1.angle
+                self.cooldown = 20
 
         if (
             self.x > game.player2.x
@@ -108,7 +123,11 @@ class Ball:
             and self.y > game.player2.y
             and self.y < game.player2.y + game.player2.height
         ):
-            self.flip_y()
+            if self.cooldown == 0:
+                self.direction = game.player2.angle
+                self.cooldown = 20
+
+        self.cooldown -= 1 if self.cooldown > 0 else 0
 
     def flip_x(self):
         self.direction = math.pi * 2 - self.direction
@@ -138,7 +157,7 @@ class Game:
 
     def run(self) -> None:
         pygame.init()
-        pygame.display.set_caption("Ping Pong")
+        pygame.display.set_caption("Dynamic Ping Pong")
 
         clock = pygame.time.Clock()
         self.running = True
@@ -153,24 +172,27 @@ class Game:
         pygame.quit()
 
     def handle_events(self):
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                self.running = False
-                return
+        event = pygame.event.poll()
+        if event.type == pygame.QUIT:
+            self.running = False
+            return
 
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RIGHT:
-                    if self.player1.x < self.width - self.player1.width:
-                        self.player1.move(Direction.RIGHT)
-                elif event.key == pygame.K_LEFT:
-                    if self.player1.x >= 0:
-                        self.player1.move(Direction.LEFT)
-                elif event.key == pygame.K_UP:
-                    if self.player1.y > self.player1.velocity:
-                        self.player1.move(Direction.UP)
-                elif event.key == pygame.K_DOWN:
-                    if self.player1.y < self.height - self.player1.velocity:
-                        self.player1.move(Direction.DOWN)
+        # if event.type == pygame.KEYDOWN:
+        #     if event.key == pygame.K_RIGHT:
+        #         if self.player1.x < self.width - self.player1.width:
+        #             self.player1.move(Direction.RIGHT)
+        #     elif event.key == pygame.K_LEFT:
+        #         if self.player1.x >= 0:
+        #             self.player1.move(Direction.LEFT)
+        #     elif event.key == pygame.K_UP:
+        #         if self.player1.y > self.player1.velocity:
+        #             self.player1.move(Direction.UP)
+        #     elif event.key == pygame.K_DOWN:
+        #         if self.player1.y < self.height - self.player1.velocity:
+        #             self.player1.move(Direction.DOWN)
+
+
+        self.player1.move_mouse(pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1])
 
     def handle_ball(self):
         self.ball.move(self)
