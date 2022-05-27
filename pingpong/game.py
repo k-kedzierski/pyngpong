@@ -14,14 +14,15 @@ class Direction(Enum):
 
 class Player:
     width = 20
-    height = 50
+    height = 60
 
     def __init__(self, init_x, init_y, color=(255, 255, 255)):
         self.x = init_x
         self.y = init_y
         self.color = color
-        self.velocity = 4
+        self.velocity = 6
         self.angle = 0
+        self.power_shot = False
 
     def draw(self, game):
         pygame.draw.rect(game, self.color, (self.x, self.y, self.width, self.height), 0)
@@ -37,7 +38,9 @@ class Player:
             self.y += self.velocity
 
     def move_mouse(self, mouse_x, mouse_y):
-        eucl_dist = math.hypot(mouse_x - self.x - (self.width / 2), mouse_y - self.y - (self.height / 2))
+        eucl_dist = math.hypot(
+            mouse_x - self.x - (self.width / 2), mouse_y - self.y - (self.height / 2)
+        )
         if eucl_dist > self.velocity:
             sinx = (mouse_y - self.y - (self.height / 2)) / eucl_dist
             cosx = (mouse_x - self.x - (self.width / 2)) / eucl_dist
@@ -45,7 +48,10 @@ class Player:
             self.x += self.velocity * cosx
             self.y += self.velocity * sinx
 
-            self.angle = math.atan2(mouse_y - self.y - (self.height / 2), mouse_x - self.x - (self.width / 2))
+            self.angle = math.atan2(
+                mouse_y - self.y - (self.height / 2),
+                mouse_x - self.x - (self.width / 2),
+            )
 
 
 class Ball:
@@ -89,21 +95,19 @@ class Ball:
         # Left and right
         if self.x > game.width:
             # TODO handle points
-            # score_a += 1
 
             self.x = game.width / 2
             self.y = game.height / 2
             self.direction = self._random_direction()
-            # self.dx *= -1
+            self.velocity = 4
 
         elif self.x < 0:
             # TODO handle points
-            # score_b += 1
 
             self.x = game.width / 2
             self.y = game.height / 2
             self.direction = self._random_direction()
-            # self.dx *= -1
+            self.velocity = 4
 
         # Paddle and self collisions
 
@@ -117,6 +121,11 @@ class Ball:
                 self.direction = game.player1.angle
                 self.cooldown = 20
 
+                if game.player1.power_shot:
+                    self.velocity += 4
+                else:
+                    self.velocity = self.velocity * 0.8
+
         if (
             self.x > game.player2.x
             and self.x < game.player2.x + game.player2.width
@@ -126,6 +135,11 @@ class Ball:
             if self.cooldown == 0:
                 self.direction = game.player2.angle
                 self.cooldown = 20
+
+                if game.player2.power_shot:
+                    self.velocity += 4
+                else:
+                    self.velocity = self.velocity * 0.8
 
         self.cooldown -= 1 if self.cooldown > 0 else 0
 
@@ -177,6 +191,14 @@ class Game:
             self.running = False
             return
 
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            self.player1.power_shot = True
+            self.player1.color = (218, 112, 214)
+
+        if event.type == pygame.MOUSEBUTTONUP:
+            self.player1.power_shot = False
+            self.player1.color = (255, 255, 255)
+
         # if event.type == pygame.KEYDOWN:
         #     if event.key == pygame.K_RIGHT:
         #         if self.player1.x < self.width - self.player1.width:
@@ -190,7 +212,6 @@ class Game:
         #     elif event.key == pygame.K_DOWN:
         #         if self.player1.y < self.height - self.player1.velocity:
         #             self.player1.move(Direction.DOWN)
-
 
         self.player1.move_mouse(pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1])
 
