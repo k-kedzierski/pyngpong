@@ -4,6 +4,10 @@ import pygame
 from pingpong.network import Network
 from enum import Enum
 
+POWERSHOT_EVENT_UP = pygame.USEREVENT + 1
+POWERSHOT_EVENT_DOWN = pygame.USEREVENT + 2
+POWERSHOT_EVENT_END = pygame.USEREVENT + 3
+
 
 class Direction(Enum):
     RIGHT = 0
@@ -27,15 +31,9 @@ class Player:
     def draw(self, game):
         pygame.draw.rect(game, self.color, (self.x, self.y, self.width, self.height), 0)
 
-    def move(self, direction):
-        if direction == Direction.RIGHT:
-            self.x += self.velocity
-        elif direction == Direction.LEFT:
-            self.x -= self.velocity
-        elif direction == Direction.UP:
-            self.y -= self.velocity
-        elif direction == Direction.DOWN:
-            self.y += self.velocity
+    def move(self, angle, velocity):
+        self.x += velocity * math.cos(angle)
+        self.y += velocity * math.sin(angle)
 
     def move_mouse(self, mouse_x, mouse_y):
         eucl_dist = math.hypot(
@@ -100,6 +98,7 @@ class Ball:
             self.y = game.height / 2
             self.direction = self._random_direction()
             self.velocity = 4
+            game.score2 += 1
 
         elif self.x < 0:
             # TODO handle points
@@ -108,6 +107,7 @@ class Ball:
             self.y = game.height / 2
             self.direction = self._random_direction()
             self.velocity = 4
+            game.score1 += 1
 
         # Paddle and self collisions
 
@@ -124,7 +124,7 @@ class Ball:
                 if game.player1.power_shot:
                     self.velocity += 4
                 else:
-                    self.velocity = self.velocity * 0.8
+                    self.velocity = self.velocity * 0.9
 
         if (
             self.x > game.player2.x
@@ -139,7 +139,7 @@ class Ball:
                 if game.player2.power_shot:
                     self.velocity += 4
                 else:
-                    self.velocity = self.velocity * 0.8
+                    self.velocity = self.velocity * 0.9
 
         self.cooldown -= 1 if self.cooldown > 0 else 0
 
@@ -168,6 +168,8 @@ class Game:
         )
         self.board = Board(self.width, self.height)
         self.ball = Ball(self.width / 2, self.height / 2)
+        self.score1 = 0
+        self.score2 = 0
 
     def run(self) -> None:
         pygame.init()
@@ -190,14 +192,25 @@ class Game:
         if event.type == pygame.QUIT:
             self.running = False
             return
-
-        if event.type == pygame.MOUSEBUTTONDOWN:
+        elif event.type == pygame.MOUSEBUTTONDOWN:
             self.player1.power_shot = True
             self.player1.color = (218, 112, 214)
-
-        if event.type == pygame.MOUSEBUTTONUP:
+            for _ in range(20):
+                pygame.event.post(pygame.event.Event(POWERSHOT_EVENT_UP))
+            for _ in range(20):
+                pygame.event.post(pygame.event.Event(POWERSHOT_EVENT_DOWN))
+            pygame.event.post(pygame.event.Event(POWERSHOT_EVENT_END))
+        elif event.type == POWERSHOT_EVENT_UP:
+            self.player1.move(self.player1.angle, 2)
+        elif event.type == POWERSHOT_EVENT_DOWN:
+            self.player1.move(self.player1.angle, -2)
+        elif event.type == POWERSHOT_EVENT_END:
             self.player1.power_shot = False
             self.player1.color = (255, 255, 255)
+        else:
+            self.player1.move_mouse(
+                pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1]
+            )
 
         # if event.type == pygame.KEYDOWN:
         #     if event.key == pygame.K_RIGHT:
@@ -212,8 +225,6 @@ class Game:
         #     elif event.key == pygame.K_DOWN:
         #         if self.player1.y < self.height - self.player1.velocity:
         #             self.player1.move(Direction.DOWN)
-
-        self.player1.move_mouse(pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1])
 
     def handle_ball(self):
         self.ball.move(self)
@@ -249,6 +260,7 @@ class Game:
         self.player1.draw(self.board.screen)
         self.player2.draw(self.board.screen)
         self.ball.draw(self.board.screen)
+        self.board.draw_score(self.score1, self.score2)
         self.board.update()
 
 
@@ -266,3 +278,8 @@ class Board:
 
     def draw_background(self) -> None:
         self.screen.fill((0, 0, 0))
+
+    def draw_score(self, score1, score2) -> None:
+        font = pygame.font.SysFont("monospace", 20)
+        text = font.render("{0} - {1}".format(score1, score2), True, (255, 255, 255))
+        self.screen.blit(text, (self.width / 2 - text.get_width() / 2, 10))
