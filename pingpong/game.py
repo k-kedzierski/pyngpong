@@ -62,12 +62,22 @@ class Ball:
         self.velocity = 4
         self.direction = self._random_direction()
         self.cooldown = 20
+        self.power_shot_angle = 0
 
     def draw(self, game):
         pygame.draw.circle(game, self.color, (self.x, self.y), self.radius)
 
     def move(self, game):
         self.handleBorders(game)
+
+        # Decay the power shot angle
+        self.power_shot_angle = (
+            self.power_shot_angle * 0.9
+            if round(self.power_shot_angle * 0.9, 2) > 0.0
+            else 0
+        )
+
+        self.direction += self.power_shot_angle
 
         self.x += self.velocity * math.cos(self.direction)
         self.y += self.velocity * math.sin(self.direction)
@@ -123,6 +133,7 @@ class Ball:
 
                 if game.player1.power_shot:
                     self.velocity += 4
+                    self.power_shot_angle = math.pi / 24
                 else:
                     self.velocity = self.velocity * 0.9
 
@@ -138,6 +149,7 @@ class Ball:
 
                 if game.player2.power_shot:
                     self.velocity += 4
+                    self.power_shot_angle = math.pi / 24
                 else:
                     self.velocity = self.velocity * 0.9
 
@@ -211,20 +223,6 @@ class Game:
             self.player1.move_mouse(
                 pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1]
             )
-
-        # if event.type == pygame.KEYDOWN:
-        #     if event.key == pygame.K_RIGHT:
-        #         if self.player1.x < self.width - self.player1.width:
-        #             self.player1.move(Direction.RIGHT)
-        #     elif event.key == pygame.K_LEFT:
-        #         if self.player1.x >= 0:
-        #             self.player1.move(Direction.LEFT)
-        #     elif event.key == pygame.K_UP:
-        #         if self.player1.y > self.player1.velocity:
-        #             self.player1.move(Direction.UP)
-        #     elif event.key == pygame.K_DOWN:
-        #         if self.player1.y < self.height - self.player1.velocity:
-        #             self.player1.move(Direction.DOWN)
 
     def handle_ball(self):
         self.ball.move(self)
